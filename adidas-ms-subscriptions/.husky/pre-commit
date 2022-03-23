@@ -1,0 +1,5 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "[Husky] pre-commit: Executing the lint and formating the code"
+yarn lint && yarn format

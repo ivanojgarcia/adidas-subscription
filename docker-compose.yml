@@ -1,0 +1,94 @@
+version: "3"
+
+services:
+  postgres-db:
+    image: postgres
+    container_name: db-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=123456
+      - POSTGRES_DB=adidas-challenge
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - default
+
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    ports:
+      - "8081:80"
+    depends_on:
+      - postgres-db
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=ivanojgarcia@gmail.com
+      - PGADMIN_DEFAULT_PASSWORD=test
+
+  ms-administrator:
+    container_name: adidas-ms-administrator
+    restart: always
+    depends_on:
+      - postgres-db
+    build: ./adidas-ms-administrator
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "4000:4000"
+    networks:
+      - default  
+    command: "yarn start"
+
+
+  ms-subscriptions:
+    container_name: adidas-ms-subscriptions
+    restart: always
+    depends_on:
+      - postgres-db
+      - ms-administrator
+    build: ./adidas-ms-subscriptions
+    environment:
+      - API_ADMIN_TOKEN=http://ms-administrator:4000
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    networks:
+      - default  
+    command: "yarn start"
+
+
+  ms-notification:
+    container_name: adidas-ms-notification
+    restart: always
+    build: ./adidas-ms-notification
+    ports:
+      - "6000:6000"
+    environment:
+      - API_ADMIN_TOKEN=http://ms-administrator:4000
+    depends_on:
+      - ms-administrator
+    networks:
+      - default  
+    command: "yarn start"
+
+    
+  ms-bff:
+    container_name: adidas-ms-bff
+    restart: always
+    build: ./adidas-ms-bff
+    environment:
+      - API_SUBSCRIPTION=http://ms-subscriptions:3000
+      - API_ADMIN_TOKEN=http://ms-administrator:4000
+      - API_NOTIFICATIONS=http://ms-notification:6000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - ms-administrator
+      - ms-subscriptions
+      - ms-notification
+    networks:
+      - default  
+    command: "yarn start"
+  
